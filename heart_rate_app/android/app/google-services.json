@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "476343473443",
+    "project_id": "healthcareapp-31ae9",
+    "storage_bucket": "healthcareapp-31ae9.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:476343473443:android:7156beafe6f1b30928e896",
+        "android_client_info": {
+          "package_name": "com.example.heart_rate_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyASScCveayB5aSwl5qq10Vcb9RPynlPzTQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

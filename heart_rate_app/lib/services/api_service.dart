@@ -2,7 +2,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 Future<void> sendHeartRateData(int userID, Map<String, dynamic> heartRateData) async {
-  final url = Uri.parse('http://10.0.2.2:3000/api/heartRate'); // Replace with your server address
+  final url = Uri.parse('http://10.0.2.2:3000/api/heartRate'); 
 
   try {
     final response = await http.post(
@@ -10,7 +10,7 @@ Future<void> sendHeartRateData(int userID, Map<String, dynamic> heartRateData) a
       headers: {'Content-Type': 'application/json'},
       body: json.encode({
         'userID': userID,
-        'heartRateData': json.encode(heartRateData), // JSON stringified
+        'heartRateData': json.encode(heartRateData), 
       }),
     );
 

@@ -4,9 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart'; // Firebase core
 import 'package:cloud_firestore/cloud_firestore.dart'; // Firestore for database
-
 import 'package:http/http.dart' as http;
-
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,6 +38,8 @@ class HeartRateMonitor extends StatefulWidget {
 class _HeartRateMonitorState extends State<HeartRateMonitor> {
   static const platform = MethodChannel('com.example.heart_rate_app/heartRate');
   double _heartRate = 0.0;
+  double _spO2 = 0.0;
+  double _stressLevel = 0.0;
   bool _emergency = false;
   bool _isDialogOpen = false;
   Timer? _timer;
@@ -62,25 +62,33 @@ class _HeartRateMonitorState extends State<HeartRateMonitor> {
     _timer = Timer.periodic(Duration(seconds: 1), (Timer timer) async {
       try {
         final heartRate = await platform.invokeMethod('getHeartRate');
+        final spO2 = await platform.invokeMethod('getSpO2'); // New method for SpO2
+        final stressLevel = await platform.invokeMethod('getStressLevel'); // New method for stress level
+
         setState(() {
           _heartRate = double.parse(heartRate);
+          _spO2 = double.parse(spO2);
+          _stressLevel = double.parse(stressLevel);
           _checkForEmergency(_heartRate);
         });
 
-        // Prepare heart rate data for Firestore
-        Map<String, dynamic> heartRateData = {
+        // Prepare heart rate, SpO2, and stress data for Firestore
+        Map<String, dynamic> healthData = {
           'heartRate': _heartRate,
+          'spO2': _spO2,
+          'stressLevel': _stressLevel,
           'status': _emergencyMessage,
           'timestamp': FieldValue.serverTimestamp(), // Firestore server timestamp
         };
 
-        // Send heart rate data to Firestore under user's subcollection
-        await addHeartRateReading(userID, heartRateData);
-       // await sendHeartRateData(userID, heartRateData);  // Call API function
+        // Send health data to Firestore under user's subcollection
+        await addHealthData(userID, healthData);
 
+        // Send health data to API
+        await sendHealthData(userID, healthData);
 
       } on PlatformException catch (e) {
-        print("Failed to get heart rate: '${e.message}'");
+        print("Failed to get health data: '${e.message}'");
       }
     });
   }
@@ -175,6 +183,44 @@ class _HeartRateMonitorState extends State<HeartRateMonitor> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
+            Text(
+              'Current SpO2:',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.white,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _spO2.toStringAsFixed(1),
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Colors.greenAccent,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Current Stress Level:',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.white,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _stressLevel.toStringAsFixed(1),
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Colors.orangeAccent,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
             if (_emergency)
               Text(
                 'Emergency detected!',
@@ -187,43 +233,43 @@ class _HeartRateMonitorState extends State<HeartRateMonitor> {
     );
   }
 
-  // Firestore function to add heart rate data under user's HeartRateReadings subcollection
-  Future<void> addHeartRateReading(String userID, Map<String, dynamic> heartRateData) async {
+  // Firestore function to add heart rate, SpO2, and stress data under user's HeartRateReadings subcollection
+  Future<void> addHealthData(String userID, Map<String, dynamic> healthData) async {
     final firestore = FirebaseFirestore.instance;
 
     try {
       await firestore
           .collection('Users')
           .doc(userID) // Use userID as document ID in Users collection
-          .collection('HeartRateReadings') // Subcollection for each user's heart rate readings
-          .add(heartRateData); // Add the heart rate data document
-      print('Heart rate data inserted successfully');
+          .collection('HealthReadings') // Subcollection for each user's health data
+          .add(healthData); // Add the health data document
+      print('Health data inserted successfully');
     } catch (error) {
-      print('Error sending heart rate data: $error');
+      print('Error sending health data: $error');
     }
   }
-}
-// **Function to Send Data to API**
 
-Future<void> sendHeartRateData(String userID, Map<String, dynamic> heartRateData) async {
-  final url = Uri.parse('http://10.0.2.2:3000/api/heartRate'); // Localhost for Android emulator
+  // **Function to Send Data to API**
+  Future<void> sendHealthData(String userID, Map<String, dynamic> healthData) async {
+    final url = Uri.parse('http://10.0.2.2:3000/api/healthData'); // Localhost for Android emulator
 
-  try {
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({
-        'userID': userID,
-        'heartRateData': heartRateData,
-      }),
-    );
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'userID': userID,
+          'healthData': healthData,
+        }),
+      );
 
-    if (response.statusCode == 201) {
-      print('Heart rate data inserted successfully');
-    } else {
-      print('Failed to insert heart rate data: ${response.statusCode}');
+      if (response.statusCode == 201) {
+        print('Health data inserted successfully');
+      } else {
+        print('Failed to insert health data: ${response.statusCode}');
+      }
+    } catch (error) {
+      print('Error sending health data: $error');
     }
-  } catch (error) {
-    print('Error sending heart rate data: $error');
   }
 }
